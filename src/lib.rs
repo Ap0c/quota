@@ -25,35 +25,35 @@ mod tests {
 
     #[test]
     fn index_test_1() {
-        let array1 = QArray {
+        let array = QArray {
             dimensions: vec![1, 1, 1],
             data: vec![1],
         };
 
-        assert_eq!(index(&array1, vec![0, 0, 0]), 0);
+        assert_eq!(array.index(vec![0, 0, 0].as_slice()), Some(1));
     }
 
     #[test]
     fn index_test_2() {
-        let array2 = QArray {
+        let array = QArray {
             dimensions: vec![2, 2, 1],
             data: vec![1, 2, 3, 4],
         };
 
-        assert_eq!(index(&array2, vec![1, 0, 0]), 1);
-        assert_eq!(index(&array2, vec![0, 1, 0]), 2);
+        assert_eq!(array.index(vec![1, 0, 0].as_slice()), Some(2));
+        assert_eq!(array.index(vec![0, 1, 0].as_slice()), Some(3));
     }
 
     #[test]
     fn index_test_3() {
-        let array3 = QArray {
+        let array = QArray {
             dimensions: vec![2, 4, 3],
             data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
                        22, 23, 24],
         };
 
-        assert_eq!(index(&array3, vec![1, 2, 1]), 13);
-        assert_eq!(index(&array3, vec![0, 2, 2]), 20);
+        assert_eq!(array.index(vec![1, 2, 1].as_slice()), Some(14));
+        assert_eq!(array.index(vec![0, 2, 2].as_slice()), Some(21));
     }
 
     #[test]
@@ -109,7 +109,36 @@ pub struct QArray {
     pub data: Vec<isize>,
 }
 
-pub fn index(array: &QArray, coordinates: Vec<usize>) -> usize {
+impl QArray {
+    /// Return the element at the given coordinates.
+    /// If the coordinates don't specify a single element (e.g. 2D coordinates
+    /// are given for a 3D array), or the coordinates are invalid,
+    /// this function will return None.
+    ///
+    /// ```
+    /// use quota::*;
+    ///
+    /// let qarray = zeros(vec![2, 2]);
+    /// assert_eq!(qarray.index(vec![0, 0].as_slice()), Some(0));
+    /// assert_eq!(qarray.index(vec![1, 1].as_slice()), Some(0));
+    /// assert_eq!(qarray.index(vec![3, 3].as_slice()), None);
+    /// assert_eq!(qarray.index(vec![1].as_slice()), None);
+    /// ```
+    pub fn index(&self, coordinates: &[usize]) -> Option<isize> {
+        // Check that the coordinates are valid
+        // The number of coordinates should match the dimensions of the array.
+        // Each coordinate should be less than the length of the array
+        // in that dimension.
+        if coordinates.len() != self.dimensions.len() { return None }
+        for (coord, dim) in coordinates.iter().zip(self.dimensions.as_slice()) {
+            if *coord >= *dim { return None }
+        }
+
+        return Some(self.data[offset(self, coordinates)])
+    }
+}
+
+fn offset(array: &QArray, coordinates: &[usize]) -> usize {
     coordinates
         .into_iter()
         .enumerate()
@@ -118,7 +147,7 @@ pub fn index(array: &QArray, coordinates: Vec<usize>) -> usize {
                      .dimensions
                      .iter()
                      .take(idx)
-                     .fold(coord, |acc, x| acc * x)
+                     .fold(*coord, |acc, x| acc * x)
              })
         .fold(0, |acc, x| acc + x)
 }
