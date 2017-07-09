@@ -21,6 +21,10 @@ mod tests {
         let a4 = zeros(vec![1, 2, 3]);
         assert_eq!(a4.shape, vec![1, 2, 3]);
         assert_eq!(a4.data, vec![0, 0, 0, 0, 0, 0]);
+
+        let a5 = zeros(vec![3, 3]);
+        assert_eq!(a5.shape, vec![3, 3]);
+        assert_eq!(a5.data, vec![0, 0, 0, 0, 0, 0, 0, 0, 0]);
     }
 
     #[test]
@@ -107,6 +111,21 @@ mod tests {
         assert_eq!(array.shape, vec![2, 2, 2]);
         assert_eq!(array.data, vec![1, 2, 3, 4, 5, 6, 7, 8]);
     }
+
+    #[test]
+    fn test_identity() {
+        let a1 = identity(1);
+        assert_eq!(a1.shape, vec![1, 1]);
+        assert_eq!(a1.data, vec![1]);
+
+        let a2 = identity(2);
+        assert_eq!(a2.shape, vec![2, 2]);
+        assert_eq!(a2.data, vec![1, 0, 0, 1]);
+
+        let a3 = identity(0);
+        assert_eq!(a3.shape, vec![0, 0]);
+        assert_eq!(a3.data, vec![]);
+    }
 }
 
 /// Return a new QArray of the given shape, filled with zeroes.
@@ -130,7 +149,27 @@ pub fn zeros(shape: Vec<usize>) -> QArray {
 /// assert_eq!(qarray.data, vec![2, 2, 2, 2, 2, 2])
 /// ```
 pub fn full(shape: Vec<usize>, fill_value: isize) -> QArray {
-    let data = repeat(fill_value).take(shape.iter().sum()).collect::<Vec<isize>>();
+    let data = repeat(fill_value).take(shape.iter().product()).collect::<Vec<isize>>();
+    QArray { shape, data }
+}
+
+/// Return a new square QArray of the given size, with ones on the main diagonal
+///
+/// ```
+/// use quota::identity;
+///
+/// let qarray = identity(3);
+/// assert_eq!(qarray.shape, vec![3, 3]);
+/// assert_eq!(qarray.data, vec![1, 0, 0, 0, 1, 0, 0, 0, 1]);
+/// ```
+pub fn identity(num_rows: usize) -> QArray {
+    let QArray { shape, mut data } = zeros(vec![num_rows, num_rows]);
+    {
+        for x in 0..num_rows {
+            let offset = offset(shape.as_slice(), &[x, x]);
+            data[offset] = 1;
+        }
+    }
     QArray { shape, data }
 }
 
@@ -165,17 +204,16 @@ impl QArray {
             if *coord >= *dim { return None }
         }
 
-        return Some(self.data[offset(self, coordinates)])
+        return Some(self.data[offset(self.shape.as_slice(), coordinates)])
     }
 }
 
-fn offset(array: &QArray, coordinates: &[usize]) -> usize {
+fn offset(shape: &[usize], coordinates: &[usize]) -> usize {
     coordinates
         .into_iter()
         .enumerate()
         .map(|(idx, coord)| {
-                 array
-                     .shape
+                 shape
                      .iter()
                      .take(idx)
                      .fold(*coord, |acc, x| acc * x)
