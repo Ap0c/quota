@@ -24,6 +24,25 @@ mod tests {
     }
 
     #[test]
+    fn full_test() {
+        let a1 = full(vec![0], 1);
+        assert_eq!(a1.shape, vec![0]);
+        assert_eq!(a1.data, vec![]);
+
+        let a2 = full(vec![1], -3);
+        assert_eq!(a2.shape, vec![1]);
+        assert_eq!(a2.data, vec![-3]);
+
+        let a3 = full(vec![10], 5);
+        assert_eq!(a3.shape, vec![10]);
+        assert_eq!(a3.data, vec![5, 5, 5, 5, 5, 5, 5, 5, 5, 5]);
+
+        let a4 = full(vec![1, 2, 3], 0);
+        assert_eq!(a4.shape, vec![1, 2, 3]);
+        assert_eq!(a4.data, vec![0, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
     fn index_test_1() {
         let array = QArray {
             shape: vec![1, 1, 1],
@@ -99,7 +118,19 @@ mod tests {
 /// assert_eq!(qarray.data, vec![0, 0, 0, 0, 0, 0])
 /// ```
 pub fn zeros(shape: Vec<usize>) -> QArray {
-    let data = repeat(0).take(shape.iter().sum()).collect::<Vec<isize>>();
+    full(shape, 0)
+}
+
+/// Return a new QArray of the given shape, filled with the given fill value.
+///
+/// ```
+/// use quota::full;
+/// let qarray = full(vec![1, 2, 3], 2);
+/// assert_eq!(qarray.shape, vec![1, 2, 3]);
+/// assert_eq!(qarray.data, vec![2, 2, 2, 2, 2, 2])
+/// ```
+pub fn full(shape: Vec<usize>, fill_value: isize) -> QArray {
+    let data = repeat(fill_value).take(shape.iter().sum()).collect::<Vec<isize>>();
     QArray { shape, data }
 }
 
