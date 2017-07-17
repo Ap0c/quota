@@ -140,6 +140,18 @@ pub fn zeros(shape: Vec<usize>) -> QArray {
     full(shape, 0)
 }
 
+/// Return a new QArray of the given shape, filled with ones.
+///
+/// ```
+/// use quota::ones;
+/// let qarray = ones(vec![1, 2, 3]);
+/// assert_eq!(qarray.shape, vec![1, 2, 3]);
+/// assert_eq!(qarray.data, vec![1, 1, 1, 1, 1, 1])
+/// ```
+pub fn ones(shape: Vec<usize>) -> QArray {
+    full(shape, 1)
+}
+
 /// Return a new QArray of the given shape, filled with the given fill value.
 ///
 /// ```
