@@ -1,11 +1,56 @@
+#![feature(test)]
+
+extern crate test;
+
 use std::iter::repeat;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test::Bencher;
+
+    #[bench]
+    fn bench_zeros(b: &mut Bencher) {
+        b.iter(|| zeros(vec![1, 2, 3]))
+    }
+
+    #[bench]
+    fn bench_full(b: &mut Bencher) {
+        b.iter(|| full(vec![1, 2, 3], 0))
+    }
+
+    #[bench]
+    fn bench_identity(b: &mut Bencher) {
+        b.iter(|| identity(3))
+    }
+
+    #[bench]
+    fn bench_index(b: &mut Bencher) {
+        let a = zeros(vec![3, 3, 3]);
+        let coord = vec![2, 2, 2];
+        b.iter(|| a.index(coord.as_slice()))
+    }
+
+    #[bench]
+    fn bench_1d_vec_to_qarray(b: &mut Bencher) {
+        let v = vec![1, 2, 3];
+        b.iter(|| v.to_qarray() )
+    }
+
+    #[bench]
+    fn bench_2d_vec_to_qarray(b: &mut Bencher) {
+        let v = vec![vec![1, 2], vec![3, 4]];
+        b.iter(|| v.to_qarray() )
+    }
+
+    #[bench]
+    fn bench_3d_vec_to_qarray(b: &mut Bencher) {
+        let v = vec![vec![vec![1, 2], vec![3, 4]], vec![vec![5, 6], vec![7, 8]]];
+        b.iter(|| v.to_qarray() )
+    }
 
     #[test]
-    fn zeros_creates_zero_filled_vector_of_correct_size_and_length() {
+    fn test_zeros() {
         let a1 = zeros(vec![0]);
         assert_eq!(a1.shape, vec![0]);
         assert_eq!(a1.data, vec![]);
@@ -28,7 +73,7 @@ mod tests {
     }
 
     #[test]
-    fn full_test() {
+    fn test_full() {
         let a1 = full(vec![0], 1);
         assert_eq!(a1.shape, vec![0]);
         assert_eq!(a1.data, vec![]);
@@ -47,36 +92,30 @@ mod tests {
     }
 
     #[test]
-    fn index_test_1() {
-        let array = QArray {
+    fn test_index() {
+        let a1 = QArray {
             shape: vec![1, 1, 1],
             data: vec![1],
         };
 
-        assert_eq!(array.index(vec![0, 0, 0].as_slice()), Some(1));
-    }
+        assert_eq!(a1.index(vec![0, 0, 0].as_slice()), Some(1));
 
-    #[test]
-    fn index_test_2() {
-        let array = QArray {
+        let a2 = QArray {
             shape: vec![2, 2, 1],
             data: vec![1, 2, 3, 4],
         };
 
-        assert_eq!(array.index(vec![1, 0, 0].as_slice()), Some(2));
-        assert_eq!(array.index(vec![0, 1, 0].as_slice()), Some(3));
-    }
+        assert_eq!(a2.index(vec![1, 0, 0].as_slice()), Some(2));
+        assert_eq!(a2.index(vec![0, 1, 0].as_slice()), Some(3));
 
-    #[test]
-    fn index_test_3() {
-        let array = QArray {
+        let a3 = QArray {
             shape: vec![2, 4, 3],
             data: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
                        22, 23, 24],
         };
 
-        assert_eq!(array.index(vec![1, 2, 1].as_slice()), Some(14));
-        assert_eq!(array.index(vec![0, 2, 2].as_slice()), Some(21));
+        assert_eq!(a3.index(vec![1, 2, 1].as_slice()), Some(14));
+        assert_eq!(a3.index(vec![0, 2, 2].as_slice()), Some(21));
     }
 
     #[test]
@@ -161,7 +200,9 @@ pub fn ones(shape: Vec<usize>) -> QArray {
 /// assert_eq!(qarray.data, vec![2, 2, 2, 2, 2, 2])
 /// ```
 pub fn full(shape: Vec<usize>, fill_value: isize) -> QArray {
-    let data = repeat(fill_value).take(shape.iter().product()).collect::<Vec<isize>>();
+    let data = repeat(fill_value)
+        .take(shape.iter().product())
+        .collect::<Vec<isize>>();
     QArray { shape, data }
 }
 
@@ -211,12 +252,16 @@ impl QArray {
         // The number of coordinates should match the shape of the array.
         // Each coordinate should be less than the length of the array
         // in that dimension.
-        if coordinates.len() != self.shape.len() { return None }
+        if coordinates.len() != self.shape.len() {
+            return None;
+        }
         for (coord, dim) in coordinates.iter().zip(self.shape.as_slice()) {
-            if *coord >= *dim { return None }
+            if *coord >= *dim {
+                return None;
+            }
         }
 
-        return Some(self.data[offset(self.shape.as_slice(), coordinates)])
+        return Some(self.data[offset(self.shape.as_slice(), coordinates)]);
     }
 }
 
@@ -224,12 +269,7 @@ fn offset(shape: &[usize], coordinates: &[usize]) -> usize {
     coordinates
         .into_iter()
         .enumerate()
-        .map(|(idx, coord)| {
-                 shape
-                     .iter()
-                     .take(idx)
-                     .fold(*coord, |acc, x| acc * x)
-             })
+        .map(|(idx, coord)| shape.iter().take(idx).fold(*coord, |acc, x| acc * x))
         .fold(0, |acc, x| acc + x)
 }
 
@@ -271,11 +311,13 @@ impl ToQArray for Vec<Vec<Vec<isize>>> {
     fn to_qarray(&self) -> QArray {
         let l1 = self.len();
         let (l2, l3) = match self.first() {
-            Some(fst) => match fst.first() {
-                Some(ffst) => (fst.len(), ffst.len()),
-                None => (fst.len(), 0)
-            },
-            None => (0, 0)
+            Some(fst) => {
+                match fst.first() {
+                    Some(ffst) => (fst.len(), ffst.len()),
+                    None => (fst.len(), 0),
+                }
+            }
+            None => (0, 0),
         };
         let shape = vec![l1, l2, l3];
 
@@ -287,7 +329,7 @@ impl ToQArray for Vec<Vec<Vec<isize>>> {
                     data.push(*e)
                 }
             }
-        };
+        }
 
         QArray { shape, data }
     }
